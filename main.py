@@ -1,10 +1,22 @@
+import time
+start = time.time()
 import requests
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
-url = "https://www.seedandspark.com/fund/soiled-doves#updates"
-reqStory = requests.get(url)
+url = "https://www.seedandspark.com/fund/letting-go"
+reqStory = requests.get(url + "#story")
 data = BeautifulSoup(reqStory.content, "html.parser")
 is_complete = bool(data.find_all("h2", {"class" : "greenlight"}))
+
+driver = webdriver.Chrome("/Users/ishannarula/phantomjs/bin/chromedriver")  # need to pass in path to exec
+# driver = webdriver.PhantomJS("/Users/ishannarula/phantomjs/bin/phantomjs")
+driver.get(url + "#updates")
+
+end = time.time()
+print(end - start)
+print()
 
 def get_name():
     name = data.find_all("h2", {"class": "project-title"})[0].text
@@ -114,6 +126,81 @@ def get_wishlist():
     print(wishlist_items)
     print(wishlist_progress)
 
+def get_num_updates():
+    updates = driver.find_elements_by_class_name("update-item")
+    print(len(updates))
+
+def get_team():
+    team_button = driver.find_element_by_xpath("""//*[@id="tab_team"]""")
+    team_button.click()
+
+    time.sleep(0.5)         # need to sleep each time you switch the page
+
+    member_data = driver.find_elements_by_css_selector(".card-module.team-card")
+
+    members = []
+    roles = []
+
+    for member in member_data:
+        lines = member.text.splitlines()
+        members.append(lines[0]);
+        roles.append(lines[1:(len(lines))])
+
+    print(members)
+    print(roles)
+
+def get_supporters_and_dates():
+    community_button = driver.find_element_by_xpath("""//*[@id="tab_community"]""")
+    community_button.click()
+    time.sleep(0.5)
+
+    page_nums = driver.find_element_by_class_name("pagination").text
+    str_length = len(page_nums)
+    tabs = ""       # algorithm only works for 1 and 2-digit numbers, so domain 1 < x < 99
+
+    if str_length <= 9:
+        tabs = str_length
+    else:
+        page_nums = page_nums[9:(str_length + 1)]
+        str_length = len(page_nums)
+        tabs = page_nums[str_length - 2:str_length]
+
+    tabs = int(tabs);
+
+    supporter_names = [];
+    supporter_dates = [];
+    supporter_times = [];
+
+    for counter in range(1, tabs + 1):
+        entries = driver.find_elements_by_class_name("supporter-item")
+
+        for entry in entries:
+            lines = entry.text.splitlines()
+            supporter_names.append(lines[0])
+            full_date = lines[2].split()
+            date = full_date[1] + " " + full_date[2]
+            clock = full_date[4] + " " + full_date[5]
+            supporter_dates.append(date)
+            supporter_times.append(clock)
+
+        next_button = driver.find_element_by_class_name("pageNext")
+        next_button.click();
+        time.sleep(0.5)
+
+    print(supporter_names)
+    print(supporter_dates)
+    print(supporter_times)
+
+    size = len(supporter_dates)
+    start_date = supporter_dates[size - 1] + " " + supporter_times[size - 1]
+    end_date = supporter_dates[0] + " " + supporter_times[0]
+
+    print(start_date)
+    print(end_date)
+
+
+start = time.time()
+
 get_name()
 get_genre()
 get_length()
@@ -124,9 +211,13 @@ get_num_followers()
 get_rewards(is_complete)
 get_wishlist()
 
+get_num_updates()
+get_team()
+get_supporters_and_dates()
 
-
-
+end = time.time()
+print()
+print(end - start)
 
 
 
